@@ -1,0 +1,85 @@
+<UserControl
+    x:Class="AppMain.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 页面标题 -->
+        <Border
+            Grid.Row="0"
+            Margin="8,8,8,10"
+            Padding="14"
+            Background="{DynamicResource SurfaceCard}"
+            BorderBrush="{DynamicResource BorderLine}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <TextBlock
+                Foreground="{DynamicResource AccentBlue}"
+                FontSize="18"
+                FontWeight="SemiBold"
+                Text="系统设置" />
+        </Border>
+
+        <!-- 设置卡片 -->
+        <Border
+            Grid.Row="1"
+            Margin="8,0,8,8"
+            Padding="16"
+            Background="{DynamicResource SurfaceCard}"
+            BorderBrush="{DynamicResource BorderLine}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Grid.Row="0"
+                    Foreground="{DynamicResource TextMain}"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="语言与主题" />
+
+                <Separator Grid.Row="1" Margin="0,10,0,12" Background="{DynamicResource BorderLine}" />
+
+                <StackPanel Grid.Row="2">
+                    <TextBlock
+                        Foreground="{DynamicResource TextDim}"
+                        FontSize="11"
+                        Text="中英文语言切换：" />
+                    <ComboBox
+                        Width="220"
+                        Margin="0,8,0,0"
+                        SelectedIndex="{Binding SelectedLanguageIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="中文" />
+                        <ComboBoxItem Content="English" />
+                    </ComboBox>
+
+                    <TextBlock
+                        Margin="0,12,0,0"
+                        Foreground="{DynamicResource TextDim}"
+                        FontSize="11"
+                        Text="背景色切换：" />
+                    <ComboBox
+                        Width="220"
+                        Margin="0,8,0,0"
+                        SelectedIndex="{Binding SelectedThemeIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="深邃科技黑" />
+                        <ComboBoxItem Content="简约现代灰" />
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- 已移除本地化反馈展示模块 -->
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
+

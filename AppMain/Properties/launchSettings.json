@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "AppMain": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Staging"
+      }
+    }
+  }
+}

@@ -1,0 +1,185 @@
+<UserControl
+    x:Class="AppMain.Views.LogView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="LogView_OnLoaded"
+    Unloaded="LogView_OnUnloaded">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 筛选控制区 -->
+        <Border
+            Grid.Row="0"
+            Margin="0,0,0,10"
+            Padding="12"
+            Background="{StaticResource SurfaceCard}"
+            BorderBrush="{StaticResource BorderLine}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <WrapPanel Grid.Row="0" VerticalAlignment="Center">
+                    <TextBlock
+                        Margin="0,0,8,6"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource TextDim}"
+                        Text="开始" />
+                    <DatePicker
+                        x:Name="DpStart"
+                        Width="120"
+                        Margin="0,0,12,6" />
+                    <TextBlock
+                        Margin="0,0,8,6"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource TextDim}"
+                        Text="结束" />
+                    <DatePicker
+                        x:Name="DpEnd"
+                        Width="120"
+                        Margin="0,0,12,6" />
+                    <TextBlock
+                        Margin="0,0,8,6"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource TextDim}"
+                        Text="等级" />
+                    <ComboBox
+                        x:Name="CbLevel"
+                        Width="84"
+                        Margin="0,0,12,6"
+                        SelectedIndex="0">
+                        <ComboBoxItem Content="All" Tag="All" />
+                        <ComboBoxItem Content="Info" Tag="Info" />
+                        <ComboBoxItem Content="Warn" Tag="Warn" />
+                        <ComboBoxItem Content="Error" Tag="Error" />
+                    </ComboBox>
+                    <TextBlock
+                        Margin="0,0,8,6"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource TextDim}"
+                        Text="关键词" />
+                    <TextBox
+                        x:Name="TbKeyword"
+                        Width="140"
+                        Margin="0,0,12,6"
+                        VerticalContentAlignment="Center" />
+                    <Button
+                        x:Name="BtnQuery"
+                        Width="76"
+                        Margin="0,0,8,6"
+                        Click="BtnQuery_OnClick"
+                        Content="查询"
+                        Foreground="{StaticResource TextMain}" />
+                    <Button
+                        x:Name="BtnLive"
+                        Width="90"
+                        Margin="0,0,8,6"
+                        Click="BtnLive_OnClick"
+                        Content="实时监视"
+                        Foreground="{StaticResource AccentBlue}" />
+                    <Button
+                        x:Name="BtnExport"
+                        Width="90"
+                        Margin="0,0,0,6"
+                        Click="BtnExport_OnClick"
+                        Content="导出 CSV"
+                        Foreground="{StaticResource TextMain}" />
+                </WrapPanel>
+                <StackPanel
+                    Grid.Row="1"
+                    Margin="0,4,0,0"
+                    Orientation="Horizontal">
+                    <Button
+                        x:Name="BtnPrev"
+                        Width="72"
+                        Margin="0,0,8,0"
+                        Click="BtnPrev_OnClick"
+                        Content="上一页"
+                        IsEnabled="False" />
+                    <Button
+                        x:Name="BtnNext"
+                        Width="72"
+                        Margin="0,0,16,0"
+                        Click="BtnNext_OnClick"
+                        Content="下一页"
+                        IsEnabled="False" />
+                    <TextBlock
+                        x:Name="TbPageInfo"
+                        VerticalAlignment="Center"
+                        Foreground="{StaticResource TextDim}"
+                        Text="实时模式：新日志显示在顶部" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 数据展示区 -->
+        <Border
+            Grid.Row="1"
+            Padding="0"
+            Background="{StaticResource SurfaceCard}"
+            BorderBrush="{StaticResource BorderLine}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <DataGrid
+                x:Name="GridLogs"
+                AutoGenerateColumns="False"
+                Background="Transparent"
+                BorderThickness="0"
+                CanUserAddRows="False"
+                CanUserDeleteRows="False"
+                Foreground="{StaticResource TextMain}"
+                GridLinesVisibility="Horizontal"
+                HeadersVisibility="Column"
+                IsReadOnly="True"
+                RowHeight="28"
+                SelectionMode="Single">
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+                        <Setter Property="Background" Value="{StaticResource SurfaceCard}" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="Padding" Value="8,0,8,0" />
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn
+                        Width="160"
+                        Binding="{Binding TimeText}"
+                        Header="时间" />
+                    <DataGridTextColumn
+                        Width="72"
+                        Binding="{Binding Level}"
+                        Header="等级" />
+                    <DataGridTextColumn
+                        Width="140"
+                        Binding="{Binding Source}"
+                        Header="来源" />
+                    <DataGridTextColumn
+                        Width="*"
+                        Binding="{Binding Content}"
+                        Header="内容" />
+                </DataGrid.Columns>
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Error">
+                                <Setter Property="Background" Value="#22EF4444" />
+                                <Setter Property="Foreground" Value="#FECACA" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Level}" Value="Warn">
+                                <Setter Property="Background" Value="#22F97316" />
+                                <Setter Property="Foreground" Value="#FED7AA" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>
