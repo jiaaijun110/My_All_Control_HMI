@@ -1,4 +1,4 @@
-﻿using Common.CPlc;
+using Common.CPlc;
 using Serilog;
 using System.Reflection;
 
@@ -54,6 +54,34 @@ namespace Services
             {
                 Log.Warning(ex, "PLC 连接失败（继续使用默认/仿真数据）。");
             }
+        }
+
+        private async Task EnsureConnectedStrictAsync()
+        {
+            if (_plc.IsConnected)
+            {
+                return;
+            }
+
+            var ok = await _plc.ConnectAsync().ConfigureAwait(false);
+            if (!ok)
+            {
+                throw new InvalidOperationException("PLC 连接失败，无法写入。");
+            }
+        }
+
+        /// <summary>
+        /// 直接写入 S7.Net 地址（例如：DB9.DBX0.0）。
+        /// </summary>
+        public async Task WriteBoolDbBitAsync(string s7Address, bool value)
+        {
+            if (string.IsNullOrWhiteSpace(s7Address))
+            {
+                throw new ArgumentException("s7Address 不能为空。", nameof(s7Address));
+            }
+
+            await EnsureConnectedStrictAsync().ConfigureAwait(false);
+            await _plc.WriteAsync(s7Address, value).ConfigureAwait(false);
         }
         /// <param name="address">PLC 点位地址（项目内请替换为真实地址/Tag）。</param>
         /// <param name="value">控制值。</param>
@@ -186,6 +214,61 @@ namespace Services
             {
                 Log.Warning(ex, "写入数值失败：{Address}", address);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// 通用异步写入：优先走 IPlc.WriteAsync，失败时再回退到驱动扩展 WriteTag。
+        /// </summary>
+        public async Task<bool> WriteValueAsync(string address, object value)
+        {
+            await EnsureConnectedAsync().ConfigureAwait(false);
+            try
+            {
+                await _plc.WriteAsync(address, value).ConfigureAwait(false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "WriteAsync 写入失败，尝试回退 WriteTag：{Address}", address);
+            }
+
+            var writeMethod = _plc.GetType().GetMethod("WriteTag", new[] { typeof(string), typeof(object) });
+            if (writeMethod == null)
+            {
+                Log.Warning("当前 PLC 驱动不支持 WriteTag，通用写入失败：{Address}", address);
+                return false;
+            }
+
+            try
+            {
+                writeMethod.Invoke(_plc, new object[] { address, value });
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "回退 WriteTag 失败：{Address}", address);
+                return false;
+            }
+        }
+
+        public async Task<string> ReadTextAsync(string address)
+        {
+            await EnsureConnectedAsync().ConfigureAwait(false);
+            var readMethod = _plc.GetType().GetMethod("ReadTag", new[] { typeof(string) });
+            if (readMethod == null)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var obj = readMethod.Invoke(_plc, new object[] { address });
+                return obj?.ToString() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
         /// <param name="address">PLC 点位地址。</param>

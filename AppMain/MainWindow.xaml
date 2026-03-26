@@ -191,7 +191,8 @@
                         Width="8"
                         Height="8"
                         Margin="0,0,5,0"
-                        Fill="{Binding PlcStatusLampBrush}" />
+                        Fill="{Binding PlcStatusLampBrush}"
+                        Opacity="{Binding PlcStatusLampOpacity}" />
                     <TextBlock
                         FontSize="11"
                         Foreground="{StaticResource TextDim}"

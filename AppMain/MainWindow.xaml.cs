@@ -1,4 +1,4 @@
-﻿using AppMain.Views;
+using AppMain.Views;
 using Services.Core;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -17,6 +17,8 @@ namespace AppMain
         private readonly Action<LogEventDto> _latestInfoHandler;
         private Brush _databaseLampBrush = Brushes.Gray;
         private Brush _plcStatusLampBrush = Brushes.LimeGreen;
+        private double _plcStatusLampOpacity = 1.0;
+        private DispatcherTimer? _plcBlinkTimer;
 
         private string _currentUserName = string.Empty;
         private string _currentUserRoleText = string.Empty;
@@ -30,10 +32,11 @@ namespace AppMain
             CurrentUserRoleText = "管理员";
             CurrentUserRoleBrush = (Brush)FindResource("AccentBlue");
 
-            PlcStatusText = "PLC: 通讯正常";
+            PlcStatusText = "PLC: --";
             DatabaseStatusText = "DB: Connected";
             LastInfoTickerText = "最新 INFO：—";
             PlcStatusLampBrush = (Brush)FindResource("SuccessGreen");
+            PlcStatusLampOpacity = 1.0;
 
             _latestInfoHandler = OnLatestInfoLog;
             LoggingDatabaseInitializer.LatestInfoLog += _latestInfoHandler;
@@ -54,16 +57,17 @@ namespace AppMain
             {
                 telemetry.PropertyChanged += (_, e) =>
                 {
-                    if (e.PropertyName == nameof(PlcTelemetryModel.IsConnected))
+                    if (e.PropertyName == nameof(PlcTelemetryModel.IsConnected) ||
+                        e.PropertyName == nameof(PlcTelemetryModel.IsFaulted))
                     {
                         Dispatcher.BeginInvoke(() =>
                         {
-                            UpdatePlcStatus(telemetry.IsConnected);
+                            UpdatePlcStatus(telemetry.IsConnected, telemetry.IsFaulted);
                         });
                     }
                 };
 
-                UpdatePlcStatus(telemetry.IsConnected);
+                UpdatePlcStatus(telemetry.IsConnected, telemetry.IsFaulted);
             }
         }
 
@@ -132,6 +136,12 @@ namespace AppMain
             set => SetField(ref _plcStatusText, value);
         }
 
+        public double PlcStatusLampOpacity
+        {
+            get => _plcStatusLampOpacity;
+            set => SetField(ref _plcStatusLampOpacity, value);
+        }
+
         private string _databaseStatusText = "DB: --";
         public string DatabaseStatusText
         {
@@ -181,18 +191,60 @@ namespace AppMain
 
         public event PropertyChangedEventHandler? PropertyChanged;
         /// <param name="isConnected">PLC 是否已建立通讯。</param>
-        private void UpdatePlcStatus(bool isConnected)
+        private void UpdatePlcStatus(bool isConnected, bool isFaulted)
         {
+            if (isFaulted)
+            {
+                PlcStatusLampBrush = (Brush)FindResource("ErrorRed");
+                PlcStatusText = "PLC 通讯故障";
+                StartPlcBlink();
+                return;
+            }
+
             if (isConnected)
             {
                 PlcStatusLampBrush = (Brush)FindResource("SuccessGreen");
-                PlcStatusText = "PLC: 通讯正常";
+                PlcStatusText = "PLC 通讯正常";
+                StopPlcBlink();
+                return;
             }
-            else
+
+            // 未完成心跳初始化/连接中：不闪烁
+            PlcStatusLampBrush = Brushes.Gray;
+            PlcStatusText = "PLC: --";
+            StopPlcBlink();
+        }
+
+        private void StartPlcBlink()
+        {
+            if (_plcBlinkTimer != null)
             {
-                PlcStatusLampBrush = (Brush)FindResource("ErrorRed");
-                PlcStatusText = "PLC: 通讯故障";
+                return;
             }
+
+            _plcBlinkTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+
+            _plcBlinkTimer.Tick += (_, _) =>
+            {
+                // 闪烁：1.0 <-> 0.2
+                PlcStatusLampOpacity = PlcStatusLampOpacity < 0.5 ? 1.0 : 0.2;
+            };
+            _plcBlinkTimer.Start();
+        }
+
+        private void StopPlcBlink()
+        {
+            if (_plcBlinkTimer == null)
+            {
+                return;
+            }
+
+            _plcBlinkTimer.Stop();
+            _plcBlinkTimer = null;
+            PlcStatusLampOpacity = 1.0;
         }
         private void SwitchUser_Click(object sender, RoutedEventArgs e)
         {

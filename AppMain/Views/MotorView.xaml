@@ -1,7 +1,58 @@
 <UserControl
     x:Class="AppMain.Views.MotorView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:AppMain.ValueConverters">
+    <UserControl.Resources>
+        <!-- SystemRunning -> Start/Stop button appearance -->
+        <conv:OnlineOfflineBrushConverter
+            x:Key="SystemRunningStartBackgroundConverter"
+            TrueBrush="#00FF00"
+            FalseBrush="{StaticResource BorderLine}" />
+        <conv:OnlineOfflineBrushConverter
+            x:Key="SystemRunningStopBackgroundConverter"
+            TrueBrush="{StaticResource BorderLine}"
+            FalseBrush="#FF0000" />
+
+        <conv:BoolToTextConverter
+            x:Key="SystemRunningStartContentConverter"
+            TrueText="运行中"
+            FalseText="启动" />
+        <conv:BoolToTextConverter
+            x:Key="SystemRunningStopContentConverter"
+            TrueText="停止"
+            FalseText="已停止" />
+        <conv:OnlineOfflineBrushConverter
+            x:Key="FaultLampBrushConverter"
+            TrueBrush="{StaticResource ErrorRed}"
+            FalseBrush="{StaticResource BorderLine}" />
+        <Style TargetType="TextBox">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="8,4" />
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBlue}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Height" Value="30" />
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource AccentBlue}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Margin="0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -22,21 +73,17 @@
             BorderBrush="{StaticResource BorderLine}"
             BorderThickness="1"
             CornerRadius="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <UniformGrid Columns="3">
 
                 <Button
-                    Grid.Column="0"
-                    Width="92"
-                    Height="92"
-                    Background="{StaticResource SuccessGreen}"
+                    x:Name="BtnStart"
+                    Width="74"
+                    Height="74"
+                    Background="{Binding SystemRunning, Converter={StaticResource SystemRunningStartBackgroundConverter}}"
                     Foreground="White"
-                    Content="启动"
+                    Content="{Binding SystemRunning, Converter={StaticResource SystemRunningStartContentConverter}}"
                     IsEnabled="{Binding IsUiEnabled}"
-                    Command="{Binding SystemStartCommand}"
+                    Click="BtnStart_Click"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
                     <Button.Template>
@@ -45,9 +92,10 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="46"
+                                CornerRadius="37"
                                 x:Name="border">
                                 <ContentPresenter
+                                Content="{TemplateBinding Content}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
                             </Border>
@@ -64,14 +112,14 @@
                 </Button>
 
                 <Button
-                    Grid.Column="1"
-                    Width="92"
-                    Height="92"
-                    Background="{StaticResource ErrorRed}"
+                    x:Name="BtnStop"
+                    Width="74"
+                    Height="74"
+                    Background="{Binding SystemRunning, Converter={StaticResource SystemRunningStopBackgroundConverter}}"
                     Foreground="White"
-                    Content="停止"
+                    Content="{Binding SystemRunning, Converter={StaticResource SystemRunningStopContentConverter}}"
                     IsEnabled="{Binding IsUiEnabled}"
-                    Command="{Binding SystemStopCommand}"
+                    Click="BtnStop_Click"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
                     <Button.Template>
@@ -80,9 +128,10 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="46"
+                                CornerRadius="37"
                                 x:Name="border">
                                 <ContentPresenter
+                                Content="{TemplateBinding Content}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
                             </Border>
@@ -91,23 +140,57 @@
                                     <Setter Property="Opacity" TargetName="border" Value="0.85" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Opacity" Value="0.5" />
+                                    <Setter Property="Opacity" TargetName="border" Value="0.5" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-            </Grid>
+
+                <Button
+                    Width="74"
+                    Height="74"
+                    Background="{Binding IsAnyFaulted, Converter={StaticResource FaultLampBrushConverter}}"
+                    Foreground="White"
+                    Content="故障"
+                    IsEnabled="{Binding IsUiEnabled}"
+                    Command="{Binding SystemResetAlarmCommand}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="37"
+                                x:Name="border">
+                                <ContentPresenter
+                                    Content="{TemplateBinding Content}"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" TargetName="border" Value="0.85" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" TargetName="border" Value="0.5" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </UniformGrid>
         </Border>
 
         <!-- 伺服与步进卡片 -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
@@ -120,53 +203,92 @@
                 Background="{StaticResource SurfaceCard}"
                 BorderBrush="{StaticResource BorderLine}"
                 BorderThickness="1"
-                CornerRadius="8">
-                <Grid>
+                CornerRadius="8"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch">
+                <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-
-                    <TextBlock
-                        Grid.Row="0"
-                        Foreground="{StaticResource AccentBlue}"
-                        FontSize="16"
-                        FontWeight="SemiBold"
-                        Text="伺服电机模块" />
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="SemiBold" Text="伺服电机调试" />
+                        <ToggleButton Grid.Column="1" Width="64" Content="设置" IsChecked="{Binding IsServoSettingOpen, Mode=TwoWay}" />
+                    </Grid>
 
                     <Separator Grid.Row="1" Margin="0,12,0,10" Background="{StaticResource BorderLine}" />
 
                     <!-- 实时数据 -->
                     <StackPanel Grid.Row="2" Orientation="Vertical">
-                        <!-- 伺服模拟动画（随转速变化旋转） -->
-                        <Grid Height="54" Margin="0,0,0,8">
+                        <!-- 伺服电机动画（机身+转子+轴） -->
+                        <Grid Height="88" Margin="0,0,0,10" Opacity="{Binding ServoAnimOpacity}">
+                            <Border
+                                Height="54"
+                                Width="176"
+                                Background="#162238"
+                                BorderBrush="{StaticResource BorderLine}"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
                             <Ellipse
-                                Width="40"
-                                Height="40"
+                                Width="56"
+                                Height="56"
+                                Fill="#0E1A30"
                                 Stroke="{StaticResource BorderLine}"
                                 StrokeThickness="2"
                                 HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Opacity="{Binding ServoAnimOpacity}" />
+                                VerticalAlignment="Center" />
+                            <Grid Width="50" Height="50" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <RotateTransform Angle="{Binding ServoAnimAngle}" />
+                                </Grid.RenderTransform>
+                                <Ellipse Fill="#10233F" Stroke="{StaticResource AccentBlue}" StrokeThickness="1.5" />
+                                <Rectangle Width="3" Height="22" Fill="{StaticResource AccentBlue}" RadiusX="1.5" RadiusY="1.5" />
+                                <Rectangle Width="22" Height="3" Fill="{StaticResource AccentBlue}" RadiusX="1.5" RadiusY="1.5" />
+                            </Grid>
                             <Rectangle
-                                Width="4"
-                                Height="22"
-                                Fill="{StaticResource AccentBlue}"
+                                Width="28"
+                                Height="10"
+                                Fill="#CBD5E1"
+                                RadiusX="2"
+                                RadiusY="2"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                Opacity="{Binding ServoAnimOpacity}"
-                                RenderTransformOrigin="0.5,0.5">
-                                <Rectangle.RenderTransform>
-                                    <RotateTransform Angle="{Binding ServoAnimAngle}" />
-                                </Rectangle.RenderTransform>
-                            </Rectangle>
+                                Margin="102,0,0,0" />
+                            <Ellipse
+                                Width="8"
+                                Height="8"
+                                Fill="{StaticResource SuccessGreen}"
+                                Stroke="{StaticResource BorderLine}"
+                                StrokeThickness="1"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="-98,0,0,0" />
                         </Grid>
 
                         <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Text="当前位置：" />
-                        <TextBlock Foreground="{StaticResource TextMain}" FontSize="14" Text="{Binding ServoPositionText}" />
+                        <TextBlock FontSize="14" Text="{Binding ServoPositionText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ServoOutOfSoftLimit}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource ErrorRed}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Margin="0,8,0,0" Foreground="{StaticResource TextDim}" FontSize="11" Text="实时转速：" />
                         <TextBlock Foreground="{StaticResource TextMain}" FontSize="14" Text="{Binding ServoSpeedText}" />
                         <TextBlock Margin="0,8,0,0" Foreground="{StaticResource TextDim}" FontSize="11" Text="负载率：" />
@@ -178,88 +300,145 @@
                             Text="{Binding ServoLoadRateText}" />
                     </StackPanel>
 
+                    <!-- 运行面板参数 -->
+                    <Border Grid.Row="3" Margin="0,12,0,0" Padding="10" Background="#0B1222" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="6">
+                        <StackPanel>
+                            <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Text="运行面板参数 (mm)" />
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <TextBox Margin="0,0,8,8" Text="{Binding ServoTargetPosMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=目标位置 {0:F2} mm}" />
+                                <TextBox Margin="0,0,0,8" Text="{Binding ServoSpeedSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=运行速度 {0:F2}}" />
+                                <TextBox Margin="0,0,8,8" Text="{Binding ServoAccelSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=加速 {0:F2}}" />
+                                <TextBox Margin="0,0,0,8" Text="{Binding ServoDecelSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=减速 {0:F2}}" />
+                                <TextBox Margin="0,0,8,0" Text="{Binding ServoJogSpeedSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=点动速度 {0:F2}}" />
+                                <Button Content="应用运行参数" Command="{Binding ServoApplyOperationParamsCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- 状态 -->
                     <Border
-                        Grid.Row="3"
+                        Grid.Row="4"
                         Padding="12"
                         Margin="0,12,0,12"
                         Background="#0B1222"
                         BorderBrush="{StaticResource BorderLine}"
                         BorderThickness="1"
                         CornerRadius="6">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Ellipse
-                                    Width="10"
-                                    Height="10"
-                                    Margin="0,0,8,0"
-                                    Fill="{StaticResource BorderLine}">
+                        <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Margin="8,0">
+                                <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsServoEnabled}" Value="True">
+                                                <DataTrigger Binding="{Binding IsServoNormal}" Value="True">
                                                     <Setter Property="Fill" Value="{StaticResource SuccessGreen}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <TextBlock
-                                    Foreground="{StaticResource TextDim}"
-                                    FontSize="12"
-                                    Text="已使能" />
+                                <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="正常" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                <Ellipse
-                                    Width="10"
-                                    Height="10"
-                                    Margin="0,0,8,0"
-                                    Fill="{StaticResource BorderLine}">
+
+                            <StackPanel Orientation="Horizontal" Margin="8,0">
+                                <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsServoFaulted}" Value="True">
+                                                <DataTrigger Binding="{Binding IsServoStopped}" Value="True">
+                                                    <Setter Property="Fill" Value="{StaticResource WarnYellow}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="停止" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="8,0">
+                                <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsServoEnabledState}" Value="True">
+                                                    <Setter Property="Fill" Value="{StaticResource AccentBlue}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="已使能" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="8,0">
+                                <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsServoFaultState}" Value="True">
                                                     <Setter Property="Fill" Value="{StaticResource ErrorRed}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <TextBlock
-                                    Foreground="{StaticResource TextDim}"
-                                    FontSize="12"
-                                    Text="故障中" />
+                                <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="故障" />
                             </StackPanel>
-                        </Grid>
+
+                            <StackPanel Orientation="Horizontal" Margin="8,0">
+                                <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsServoOffline}" Value="True">
+                                                    <Setter Property="Fill" Value="{StaticResource WarnOrange}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="离线" />
+                            </StackPanel>
+                        </WrapPanel>
                     </Border>
 
-                    <!-- 控制按钮 -->
-                    <StackPanel Grid.Row="4" Orientation="Vertical">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                            <ToggleButton
-                                Width="120"
-                                Content="使能"
-                                IsChecked="{Binding IsServoEnabled, Mode=TwoWay}"
-                                Command="{Binding ServoEnableCommand}"
-                                CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}"
-                                IsEnabled="{Binding IsUiEnabled}" />
-                            <Button
-                                Width="90"
-                                Margin="12,0,0,0"
-                                Content="回零"
-                                Command="{Binding ServoHomeCommand}"
-                                IsEnabled="{Binding IsUiEnabled}" />
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Width="90" Content="Jog+" Command="{Binding ServoJogPlusCommand}" IsEnabled="{Binding IsUiEnabled}" />
-                            <Button Width="90" Margin="12,0,0,0" Content="Jog-" Command="{Binding ServoJogMinusCommand}" IsEnabled="{Binding IsUiEnabled}" />
-                        </StackPanel>
+                    <!-- 控制与诊断区 -->
+                    <StackPanel Grid.Row="6" Orientation="Vertical">
+                        <WrapPanel Orientation="Horizontal">
+                            <ToggleButton Width="84" Content="使能" IsChecked="{Binding IsServoEnabled, Mode=TwoWay}" Command="{Binding ServoEnableCommand}" CommandParameter="{Binding IsChecked, RelativeSource={RelativeSource Self}}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="回零" Command="{Binding ServoHomeCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="Jog+" Command="{Binding ServoJogPlusCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="Jog-" Command="{Binding ServoJogMinusCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="执行" Command="{Binding ServoExecuteCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                        </WrapPanel>
+                        <Border Margin="0,10,0,0" Padding="8" Background="#0B1222" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="6">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Foreground="{StaticResource TextDim}" Text="{Binding ServoErrorId, StringFormat=报警代码: {0}}" />
+                                    <TextBlock Foreground="{StaticResource TextMain}" Text="{Binding ServoErrorDescription, StringFormat=报警描述: {0}}" />
+                                </StackPanel>
+                                <Button DockPanel.Dock="Right" Width="96" Margin="12,0,0,0" Content="报警清除" Command="{Binding ServoResetAlarmCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            </DockPanel>
+                        </Border>
                     </StackPanel>
+
+                    <Popup IsOpen="{Binding IsServoSettingOpen, Mode=TwoWay}" Placement="Center" StaysOpen="False" AllowsTransparency="True">
+                        <Border Width="430" Padding="14" Background="#101A2C" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Foreground="{StaticResource AccentBlue}" FontWeight="SemiBold" Text="高级参数设置（工艺级）" />
+                                <UniformGrid Columns="2" Margin="0,10,0,0">
+                                    <TextBox Margin="0,0,8,8" Text="{Binding ServoPulsePerRev, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=脉冲/圈 {0:F0}}" />
+                                    <TextBox Margin="0,0,0,8" Text="{Binding ServoDisplacementPerRev, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=mm/圈 {0:F3}}" />
+                                    <TextBox Margin="0,0,8,8" Text="{Binding ServoHomeOffsetMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=回零偏置 {0:F3} mm}" />
+                                    <TextBox Margin="0,0,0,8" Text="{Binding ServoTorqueLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=力矩限制 {0:F1}%}" />
+                                    <TextBox Margin="0,0,8,8" Text="{Binding ServoSoftLimitPosMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=正向限位 {0:F2} mm}" />
+                                    <TextBox Margin="0,0,0,8" Text="{Binding ServoSoftLimitNegMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=负向限位 {0:F2} mm}" />
+                                    <ComboBox Margin="0,0,8,8" ItemsSource="{Binding PulseModeOptions}" SelectedItem="{Binding ServoPulseMode, Mode=TwoWay}" />
+                                    <Button Content="保存参数" Command="{Binding ServoSaveConfigCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </Grid>
             </Border>
 
@@ -272,102 +451,243 @@
                 Background="{StaticResource SurfaceCard}"
                 BorderBrush="{StaticResource BorderLine}"
                 BorderThickness="1"
-                CornerRadius="8">
-                <Grid>
+                CornerRadius="8"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch">
+                <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-
-                    <TextBlock
-                        Grid.Row="0"
-                        Foreground="{StaticResource AccentBlue}"
-                        FontSize="16"
-                        FontWeight="SemiBold"
-                        Text="步进电机模块" />
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Foreground="{StaticResource AccentBlue}" FontSize="16" FontWeight="SemiBold" Text="步进电机调试" />
+                        <ToggleButton Grid.Column="1" Width="64" Content="设置" IsChecked="{Binding IsStepperSettingOpen, Mode=TwoWay}" />
+                    </Grid>
 
                     <Separator Grid.Row="1" Margin="0,12,0,10" Background="{StaticResource BorderLine}" />
 
+                    <Border Grid.Row="2" Margin="0,0,0,8" Padding="10" Background="#0B1222" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="6">
+                        <StackPanel>
+                            <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Text="运行面板参数 (mm)" />
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <TextBox Margin="0,0,8,8" Text="{Binding StepperTargetPosMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=目标位置 {0:F2} mm}" />
+                                <TextBox Margin="0,0,0,8" Text="{Binding StepperSpeedSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=运行速度 {0:F2}}" />
+                                <TextBox Margin="0,0,8,8" Text="{Binding StepperAccelSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=加速 {0:F2}}" />
+                                <TextBox Margin="0,0,0,8" Text="{Binding StepperDecelSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=减速 {0:F2}}" />
+                                <TextBox Margin="0,0,8,0" Text="{Binding StepperJogSpeedSet, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=点动速度 {0:F2}}" />
+                                <Button Content="应用运行参数" Command="{Binding StepperApplyOperationParamsCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- 实时数据 -->
-                    <StackPanel Grid.Row="2" Orientation="Vertical">
-                        <!-- 步进模拟动画（随脉冲变化滑动） -->
-                        <Grid Height="48" Margin="0,0,0,8">
+                    <StackPanel Grid.Row="3" Orientation="Vertical">
+                        <!-- 步进电机动画（机身+分步转子+轴） -->
+                        <Grid Height="88" Margin="0,0,0,10" Opacity="{Binding StepperAnimOpacity}">
                             <Border
-                                Height="10"
-                                CornerRadius="5"
-                                Background="{StaticResource BorderLine}"
-                                Margin="20,0,20,0"
+                                Height="54"
+                                Width="176"
+                                Background="#162238"
+                                BorderBrush="{StaticResource BorderLine}"
+                                BorderThickness="2"
+                                CornerRadius="6"
+                                HorizontalAlignment="Center"
                                 VerticalAlignment="Center" />
-                            <Border
-                                Width="18"
-                                Height="18"
-                                CornerRadius="4"
-                                Background="{StaticResource AccentBlue}"
-                                Opacity="{Binding StepperAnimOpacity}"
+                            <Ellipse
+                                Width="52"
+                                Height="52"
+                                Fill="#0E1A30"
+                                Stroke="{StaticResource BorderLine}"
+                                StrokeThickness="2"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                            <Grid Width="46" Height="46" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <RotateTransform Angle="{Binding StepperAnimAngle}" />
+                                </Grid.RenderTransform>
+                                <Ellipse Fill="#0D1F3A" Stroke="{StaticResource AccentBlue}" StrokeThickness="1.5" />
+                                <Rectangle Width="3" Height="20" Fill="{StaticResource AccentBlue}" RadiusX="1.5" RadiusY="1.5" />
+                                <Rectangle Width="20" Height="3" Fill="{StaticResource AccentBlue}" RadiusX="1.5" RadiusY="1.5" />
+                                <Rectangle Width="3" Height="16" Fill="#60A5FA" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0.5,0.5">
+                                    <Rectangle.RenderTransform>
+                                        <RotateTransform Angle="45" />
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+                                <Rectangle Width="16" Height="3" Fill="#60A5FA" RadiusX="1.5" RadiusY="1.5" RenderTransformOrigin="0.5,0.5">
+                                    <Rectangle.RenderTransform>
+                                        <RotateTransform Angle="45" />
+                                    </Rectangle.RenderTransform>
+                                </Rectangle>
+                            </Grid>
+                            <Rectangle
+                                Width="26"
+                                Height="10"
+                                Fill="#CBD5E1"
+                                RadiusX="2"
+                                RadiusY="2"
+                                HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
-                                HorizontalAlignment="Left"
-                                Margin="20,0,0,0">
-                                <Border.RenderTransform>
+                                Margin="100,0,0,0" />
+                            <Rectangle
+                                Width="8"
+                                Height="8"
+                                Fill="{StaticResource AccentBlue}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="-98,0,0,0">
+                                <Rectangle.RenderTransform>
                                     <TranslateTransform X="{Binding StepperAnimOffset}" />
-                                </Border.RenderTransform>
-                            </Border>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
                         </Grid>
 
-                        <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Text="当前脉冲位置：" />
-                        <TextBlock Foreground="{StaticResource TextMain}" FontSize="14" Text="{Binding StepperPulsePositionText}" />
-                        <TextBlock Margin="0,8,0,0" Foreground="{StaticResource TextDim}" FontSize="11" Text="运行频率：" />
-                        <TextBlock Foreground="{StaticResource TextMain}" FontSize="14" Text="{Binding StepperRunFrequencyText}" />
-
-                        <Separator Margin="0,14,0,10" Background="{StaticResource BorderLine}" />
-
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Width="90" Content="Jog+" Command="{Binding StepperJogPlusCommand}" IsEnabled="{Binding IsUiEnabled}" />
-                            <Button Width="90" Margin="12,0,0,0" Content="Jog-" Command="{Binding StepperJogMinusCommand}" IsEnabled="{Binding IsUiEnabled}" />
-                        </StackPanel>
-
+                        <!-- 步进电机状态 -->
                         <Border
-                            Margin="0,14,0,0"
-                            Padding="12"
+                            Margin="0,0,0,8"
+                            Padding="10"
                             Background="#0B1222"
                             BorderBrush="{StaticResource BorderLine}"
                             BorderThickness="1"
                             CornerRadius="6">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="120" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock
-                                    Grid.Column="0"
-                                    VerticalAlignment="Center"
-                                    Foreground="{StaticResource TextDim}"
-                                    FontSize="11"
-                                    Text="目标位置：" />
-                                <TextBox
-                                    Grid.Column="1"
-                                    Margin="12,0,0,0"
-                                    Height="28"
-                                    Foreground="{StaticResource TextMain}"
-                                    Background="#0F172A"
-                                    BorderBrush="{StaticResource BorderLine}"
-                                    Text="{Binding StepperTargetPositionText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    IsEnabled="{Binding IsUiEnabled}" />
-                            </Grid>
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Margin="8,0">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsStepperNormal}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource SuccessGreen}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="正常" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="8,0">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsStepperStopped}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource WarnYellow}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="停止" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="8,0">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsStepperEnabled}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource AccentBlue}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="已使能" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="8,0">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsStepperFaulted}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource ErrorRed}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="故障" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="8,0">
+                                    <Ellipse Width="10" Height="10" Fill="{StaticResource BorderLine}">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsStepperOffline}" Value="True">
+                                                        <Setter Property="Fill" Value="{StaticResource WarnOrange}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Margin="6,0,0,0" Foreground="{StaticResource TextDim}" FontSize="12" Text="离线" />
+                                </StackPanel>
+                            </WrapPanel>
+                        </Border>
+
+                        <TextBlock Foreground="{StaticResource TextDim}" FontSize="11" Text="当前位置：" />
+                        <TextBlock FontSize="14" Text="{Binding StepperPulsePositionText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMain}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StepperOutOfSoftLimit}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource ErrorRed}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Margin="0,8,0,0" Foreground="{StaticResource TextDim}" FontSize="11" Text="运行频率：" />
+                        <TextBlock Foreground="{StaticResource TextMain}" FontSize="14" Text="{Binding StepperRunFrequencyText}" />
+
+                    </StackPanel>
+
+                    <!-- 控制与诊断区 -->
+                    <StackPanel Grid.Row="4" Orientation="Vertical">
+                        <WrapPanel Orientation="Horizontal">
+                            <Button Width="84" Content="使能" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="回零" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="Jog+" Command="{Binding StepperJogPlusCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="Jog-" Command="{Binding StepperJogMinusCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            <Button Width="84" Margin="8,0,0,0" Content="执行" Command="{Binding StepperExecuteCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                        </WrapPanel>
+                        <Border Margin="0,10,0,0" Padding="8" Background="#0B1222" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="6">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Left">
+                                    <TextBlock Foreground="{StaticResource TextDim}" Text="{Binding StepperErrorId, StringFormat=报警代码: {0}}" />
+                                    <TextBlock Foreground="{StaticResource TextMain}" Text="{Binding StepperErrorDescription, StringFormat=报警描述: {0}}" />
+                                </StackPanel>
+                                <Button DockPanel.Dock="Right" Width="96" Margin="12,0,0,0" Content="报警清除" Command="{Binding StepperResetAlarmCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                            </DockPanel>
                         </Border>
                     </StackPanel>
 
-                    <!-- 执行按钮 -->
-                    <Button
-                        Grid.Row="3"
-                        Height="42"
-                        Margin="0,12,0,0"
-                        Background="{StaticResource AccentBlue}"
-                        Foreground="White"
-                        Content="执行"
-                        Command="{Binding StepperExecuteCommand}"
-                        IsEnabled="{Binding IsUiEnabled}" />
+                    <Popup IsOpen="{Binding IsStepperSettingOpen, Mode=TwoWay}" Placement="Center" StaysOpen="False" AllowsTransparency="True">
+                        <Border Width="430" Padding="14" Background="#101A2C" BorderBrush="{StaticResource BorderLine}" BorderThickness="1" CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Foreground="{StaticResource AccentBlue}" FontWeight="SemiBold" Text="高级参数设置（工艺级）" />
+                                <UniformGrid Columns="2" Margin="0,10,0,0">
+                                    <TextBox Margin="0,0,8,8" Text="{Binding StepperPulsePerRev, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=脉冲/圈 {0:F0}}" />
+                                    <TextBox Margin="0,0,0,8" Text="{Binding StepperDisplacementPerRev, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=mm/圈 {0:F3}}" />
+                                    <TextBox Margin="0,0,8,8" Text="{Binding StepperHomeOffsetMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=回零偏置 {0:F3} mm}" />
+                                    <ComboBox Margin="0,0,0,8" ItemsSource="{Binding PulseModeOptions}" SelectedItem="{Binding StepperPulseMode, Mode=TwoWay}" />
+                                    <TextBox Margin="0,0,8,8" Text="{Binding StepperSoftLimitPosMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=正向限位 {0:F2} mm}" />
+                                    <TextBox Margin="0,0,0,8" Text="{Binding StepperSoftLimitNegMm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=负向限位 {0:F2} mm}" />
+                                    <Button Content="保存参数" Command="{Binding StepperSaveConfigCommand}" IsEnabled="{Binding IsUiEnabled}" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
                 </Grid>
             </Border>
         </Grid>

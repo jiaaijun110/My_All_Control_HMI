@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace Services.Core
@@ -6,6 +6,25 @@ namespace Services.Core
     public sealed class PlcTelemetryModel : INotifyPropertyChanged
     {
         private bool _isConnected;
+        private bool _isFaulted;
+        private bool _startStatus;
+        private bool _startStop;
+        private bool _systemRunning;
+
+        // 通讯故障（心跳超时/驱动异常）=> Fault
+        public bool IsFaulted
+        {
+            get => _isFaulted;
+            set
+            {
+                if (SetField(ref _isFaulted, value))
+                {
+                    // 与 IsConnected 相关的显示字段一起刷新
+                    RaiseDashboardFields();
+                }
+            }
+        }
+
         public PlcSensorPointModel Sensor1 { get; } = new("1号传感器");
         public PlcSensorPointModel Sensor2 { get; } = new("2号传感器");
         public bool IsConnected
@@ -19,10 +38,32 @@ namespace Services.Core
                 }
             }
         }
-        public string Sensor1TemperatureText => IsConnected ? $"{Sensor1.Temperature:0.0} ℃" : "--";
-        public string Sensor1HumidityText => IsConnected ? $"{Sensor1.Humidity:0.0} %" : "--";
-        public string Sensor2TemperatureText => IsConnected ? $"{Sensor2.Temperature:0.0} ℃" : "--";
-        public string Sensor2HumidityText => IsConnected ? $"{Sensor2.Humidity:0.0} %" : "--";
+
+        // DB_Data_Status (DB9) 状态反映：只用于前端指示灯显示。
+        // Start_Status 对应物理输入点 %I0.0
+        public bool StartStatus
+        {
+            get => _startStatus;
+            set => SetField(ref _startStatus, value, nameof(StartStatus));
+        }
+
+        // Start_Stop 对应物理输入点 %I0.1
+        public bool StartStop
+        {
+            get => _startStop;
+            set => SetField(ref _startStop, value, nameof(StartStop));
+        }
+
+        // DB9.DBX0.2：System_Running（用于启动/停止按钮状态显示）
+        public bool SystemRunning
+        {
+            get => _systemRunning;
+            set => SetField(ref _systemRunning, value, nameof(SystemRunning));
+        }
+        public string Sensor1TemperatureText => IsConnected ? $"{Sensor1.Temperature:0.0} ℃" : "---";
+        public string Sensor1HumidityText => IsConnected ? $"{Sensor1.Humidity:0.0} %" : "---";
+        public string Sensor2TemperatureText => IsConnected ? $"{Sensor2.Temperature:0.0} ℃" : "---";
+        public string Sensor2HumidityText => IsConnected ? $"{Sensor2.Humidity:0.0} %" : "---";
         public PlcTelemetryModel()
         {
             Sensor1.PropertyChanged += OnSensorPropertyChanged;

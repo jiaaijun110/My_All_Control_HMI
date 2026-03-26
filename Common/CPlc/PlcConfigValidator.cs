@@ -22,6 +22,26 @@ namespace Common.CPlc
             RuleFor(x => x.Port)
                 .InclusiveBetween(1, 65535)
                 .WithMessage("端口号必须在 1-65535 之间");
+
+            RuleFor(x => x.HeartbeatDbNumber)
+                .InclusiveBetween(0, int.MaxValue)
+                .WithMessage("HeartbeatDbNumber 必须为非负整数");
+
+            RuleFor(x => x.HeartbeatByteOffset)
+                .InclusiveBetween(0, int.MaxValue)
+                .WithMessage("HeartbeatByteOffset 必须为非负整数");
+
+            RuleFor(x => x.HeartbeatValueByteSize)
+                .Must(size => size == 2 || size == 4)
+                .WithMessage("HeartbeatValueByteSize 仅支持 2(整数) 或 4(DINT)");
+
+            RuleFor(x => x.HeartbeatTimeoutMs)
+                .GreaterThan(0)
+                .WithMessage("HeartbeatTimeoutMs 必须大于 0");
+
+            RuleFor(x => x.ReconnectIntervalMs)
+                .GreaterThan(0)
+                .WithMessage("ReconnectIntervalMs 必须大于 0");
         }
     }
 }

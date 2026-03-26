@@ -1,4 +1,4 @@
-﻿using Common.CPlc;
+using Common.CPlc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -10,12 +10,20 @@ namespace Drivers.DPlc.Siemens
         private readonly PlcConfig _config;
         private bool _connected;
         private int _readCount;
+        private int _heartbeatValue;
+        private bool _startStatus;
+        private bool _startStop;
+        private bool _systemRunning;
 
         // 【最标准写法】同时注入日志和配置
         public MockPlcDriver(ILogger<MockPlcDriver> logger, IOptions<PlcConfig> options)
         {
             _logger = logger;
             _config = options.Value;
+            _heartbeatValue = 0;
+            _startStatus = false;
+            _startStop = false;
+            _systemRunning = false;
         }
 
         /// <inheritdoc />
@@ -31,12 +39,79 @@ namespace Drivers.DPlc.Siemens
         public bool WriteTag(string address, object value)
         {
             _logger.LogInformation($"模拟PLC写入：地址={address}, 值={value}");
+
+            // 用于“启动/停止”按钮点动联动（DB9 启停状态）
+            if (value is bool b && !string.IsNullOrWhiteSpace(address))
+            {
+                if (address.Contains("SYSTEM_START", StringComparison.OrdinalIgnoreCase))
+                {
+                    _startStatus = b;
+                    if (_startStatus)
+                    {
+                        _startStop = false;
+                    }
+                }
+                else if (address.Contains("SYSTEM_STOP", StringComparison.OrdinalIgnoreCase))
+                {
+                    _startStop = b;
+                    if (_startStop)
+                    {
+                        _startStatus = false;
+                    }
+                }
+            }
+
             return true;
+        }
+
+        public Task WriteAsync(string address, object value)
+        {
+            _logger.LogInformation($"模拟PLC写入(WriteAsync)：address={address}, value={value}");
+
+            if (value is bool b)
+            {
+                // 直接映射 DB9 的位写入：DB9.DBX0.0 / DB9.DBX0.1
+                if (!string.IsNullOrWhiteSpace(address))
+                {
+                    if (address.Equals("DB9.DBX0.0", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 点击发送一次 true：PLC 内部会自动复位 HMI_Start；
+                        // 这里用“写入 Start 触发运行”来模拟 System_Running。
+                        _systemRunning = b;
+                    }
+                    else if (address.Equals("DB9.DBX0.1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _systemRunning = !b ? _systemRunning : false;
+                    }
+                    else if (address.Equals("DB9.DBX0.2", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _systemRunning = b;
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         public object ReadTag(string address)
         {
             _logger.LogInformation($"模拟PLC读取：地址={address}");
+            if (!string.IsNullOrWhiteSpace(address))
+            {
+                // 默认错误码为 0，避免 UI 灯长期处于“故障”态（联调/仿真友好）。
+                if (address.Contains("SERVO_ERROR_ID", StringComparison.OrdinalIgnoreCase) ||
+                    address.Contains("STEPPER_ERROR_ID", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "0";
+                }
+
+                // 默认脉冲模式
+                if (address.Contains("SERVO_PULSE_MODE", StringComparison.OrdinalIgnoreCase) ||
+                    address.Contains("STEPPER_PULSE_MODE", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Pulse/Dir";
+                }
+            }
             return "MockValue_OK";
         }
 
@@ -69,6 +144,45 @@ namespace Drivers.DPlc.Siemens
 
             _readCount++;
             var buffer = new byte[count];
+
+            // DB9：DB_Data_Status（Start_Status / Start_Stop）
+            if (db == 9 && startByte == 0 && count >= 1)
+            {
+                buffer[0] = (byte)(
+                    (_startStatus ? 0x01 : 0x00) |
+                    (_startStop ? 0x02 : 0x00) |
+                    (_systemRunning ? 0x04 : 0x00)
+                );
+            }
+
+            // 按配置写入心跳变量（自增整数），用于 PLC 心跳监测。
+            // 注意：Mock 需要写入“大端字节序”，以匹配真实 S7 返回的数据解析逻辑。
+            var hbRelativeOffset = _config.HeartbeatByteOffset - startByte;
+            if (db == _config.HeartbeatDbNumber && hbRelativeOffset >= 0 && hbRelativeOffset + _config.HeartbeatValueByteSize <= count)
+            {
+                unchecked
+                {
+                    if (_config.HeartbeatValueByteSize == 2)
+                    {
+                        var v = (short)_heartbeatValue;
+                        var raw = BitConverter.GetBytes(v);
+                        // raw[0..1] 是小端；写入到 S7 的字节数组使用大端
+                        buffer[hbRelativeOffset] = raw[1];
+                        buffer[hbRelativeOffset + 1] = raw[0];
+                    }
+                    else
+                    {
+                        var v = _heartbeatValue;
+                        var raw = BitConverter.GetBytes(v);
+                        buffer[hbRelativeOffset] = raw[3];
+                        buffer[hbRelativeOffset + 1] = raw[2];
+                        buffer[hbRelativeOffset + 2] = raw[1];
+                        buffer[hbRelativeOffset + 3] = raw[0];
+                    }
+                }
+                _heartbeatValue++;
+            }
+
             // 逻辑意图：按 DB7 与 Struct 布局写入两路温湿度（与现场地址 DBD4/8/26/30 一致）。
             if (db == 7 && count >= 34 && startByte == 0)
             {
